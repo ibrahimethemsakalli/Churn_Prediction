@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 from ipykernel.pylab.config import InlineBackend
 from jedi.api.refactoring import inline
 from imblearn.over_sampling import SMOTE
+from imblearn.over_sampling import BorderlineSMOTE
 
 
 from sklearn.linear_model import LogisticRegression
@@ -19,7 +20,8 @@ from sklearn.model_selection import train_test_split
 from sklearn import preprocessing
 from sklearn.metrics import accuracy_score
 from xgboost import XGBClassifier
-from sklearn.model_selection import KFold
+from imblearn.pipeline import Pipeline as imbpipeline
+from sklearn.model_selection import KFold,StratifiedKFold
 from sklearn.model_selection import cross_val_score, GridSearchCV
 from sklearn.metrics import accuracy_score, roc_auc_score, roc_curve, \
     classification_report
@@ -98,6 +100,9 @@ def hist_for_nums(data, numeric_cols):
         col_counter += 1
     print(col_counter,"variables have been plotted")
 hist_for_nums(df,num_cols)
+
+#df[Balance] == 0
+
 
 # Target Analyze
 
@@ -187,12 +192,13 @@ for i in df.columns:
 # Feature Engineering
 
 df["CreditScore<405"] = df["CreditScore"].apply(lambda x: 1 if x< 405 else 0)
-
+df["CreditScore<405"].value_counts()
 # df.loc[df["Balance"]>221532.800000,"Exited"]
 df["Balance"].hist()
 plt.show()
 
 df["HasBalance"] = df["Balance"].apply(lambda x: 1 if x>0 else 0)
+df.groupby("HasBalance")["Exited"].mean()
 
 df["NEW_NUMOFPRODUCTS"] = df["NumOfProducts"] - df["HasCrCard"]
 
@@ -211,7 +217,7 @@ df.loc[(df["Geography"]=="Spain")&(df["Gender"]=="Female"),"Spain_Female"] = 1
 df.groupby(["Exited","Geography"]).agg({"Age":"mean"})
 a = pd.DataFrame(pd.qcut(df["Age"],4,labels=[1,2,3,4]))
 a.rename(columns={"Age":"Age_qcut"},inplace=True)
-a.head()
+a.tail()
 df = pd.concat([df,a],axis=1)
 df.head()
 
@@ -220,6 +226,7 @@ df.groupby("EstimatedSalary_Qcut").agg({"Exited":["mean","count"]})
 
 df["Surname_Count"] = df["Surname"].apply(lambda x: len(x))
 
+df["Exited"].value_counts()
 
 # WELLDONE
 # df.loc[df["NumOfProducts"]>3,"Exited"]
@@ -268,12 +275,276 @@ y = df["Exited"]
 X = df.drop(["Exited"], axis=1)
 
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import accuracy_score
-X_train, X_test, y_train, y_test = train_test_split(X,y, test_size=0.2, random_state=0)
+from sklearn.metrics import accuracy_score,confusion_matrix,precision_score,recall_score,f1_score
+X_train, X_test, y_train, y_test = train_test_split(X,y, test_size=0.2, random_state=11,stratify=y)
+
+"""# import the Random Under Sampler object.
+from imblearn.under_sampling import RandomUnderSampler
+
+# create the object.
+under_sampler = RandomUnderSampler()
+
+# fit the object to the training data.
+X_train, y_train = under_sampler.fit_resample(X_train,y_train)"""
+
+"""# import the NearMiss object.
+from imblearn.under_sampling import NearMiss
+
+# create the object with auto
+near = NearMiss(sampling_strategy="not minority")
+
+# fit the object to the training data.
+X_train, y_train = near.fit_resample(X_train, y_train)"""
+
+"""# import the TomekLinks object.
+from imblearn.under_sampling import TomekLinks
+
+# instantiate the object with the right ratio strategy.
+tomek_links = TomekLinks(sampling_strategy='majority')
+
+# fit the object to the training data.
+X_train, y_train = tomek_links.fit_resample(X_train, y_train)"""
+
+"""# import the ClusterCentroids object.
+from imblearn.under_sampling import ClusterCentroids
+
+# instantiate the object with the right ratio.
+cluster_centroids = ClusterCentroids(sampling_strategy="auto")
+
+# fit the object to the training data.
+X_train, y_train = cluster_centroids.fit_resample(X_train, y_train)"""
+
+# import the EditedNearestNeighbours object.
+from imblearn.under_sampling import EditedNearestNeighbours
+
+# create the object to resample the majority class.
+enn = EditedNearestNeighbours(sampling_strategy="majority",)
+
+# fit the object to the training data.
+X_train, y_train = enn.fit_resample(X_train, y_train)
+
+"""# import the NeighbourhoodCleaningRule object.
+from imblearn.under_sampling import NeighbourhoodCleaningRule
+
+# create the object to resample the majority class.
+ncr = NeighbourhoodCleaningRule(sampling_strategy="majority")
+
+# fit the object to the training data.
+X_train, y_train = ncr.fit_resample(X_train, y_train)"""
+
+"""# import the Random Over Sampler object.
+from imblearn.over_sampling import RandomOverSampler
+
+# create the object.
+over_sampler = RandomOverSampler()
+
+# fit the object to the training data.
+X_train, y_train = over_sampler.fit_resample(X_train, y_train)"""
+
+"""# import the SMOTETomek
+from imblearn.over_sampling import SMOTE
+
+# create the  object with the desired sampling strategy.
+smote = SMOTE(sampling_strategy='minority')
+
+# fit the object to our training data
+X_train, y_train = smote.fit_resample(X_train, y_train)"""
+
+"""# import the ADASYN object.
+from imblearn.over_sampling import ADASYN
+
+# create the object to resample the majority class.
+adasyn = ADASYN(sampling_strategy="minority")
+
+# fit the object to the training data.
+X_train, y_train = adasyn.fit_resample(X_train, y_train)"""
+
+"""# import the SMOTETomek.
+from imblearn.combine import SMOTETomek
+
+# create the  object with the desired sampling strategy.
+smotemek = SMOTETomek(sampling_strategy='auto')
+
+# fit the object to our training data.
+X_train, y_train = smotemek.fit_resample(X_train, y_train)"""
+
+"""# import the SMOTEENN.
+from imblearn.combine import SMOTEENN
+
+# create the  object with the desired samplig strategy.
+smoenn = SMOTEENN(sampling_strategy='minority')
+
+# fit the object to our training data.
+X_train, y_train = smoenn.fit_resample(X_train, y_train)"""
+
+"""
+from imblearn.pipeline import Pipeline as imbpipeline
+from imblearn.under_sampling import RandomUnderSampler
+from imblearn.under_sampling import ClusterCentroids
+
+X_train, X_test, y_train, y_test = train_test_split(X,
+                                                    y,
+                                                    test_size=0.2,
+                                                    stratify=y,
+                                                    random_state=11)
+
+pipeline = imbpipeline(steps=[['RUS', ClusterCentroids(random_state=)],
+                              ['classifier', LogisticRegression(random_state=11,
+                                                                max_iter=1000)]])
+
+stratified_kfold = StratifiedKFold(n_splits=3,
+                                   shuffle=True,
+                                   random_state=11)
+
+param_grid = {'classifier__C': [0.001, 0.01, 0.1, 1, 10, 100, 1000]}
+grid_search = GridSearchCV(estimator=pipeline,
+                           param_grid=param_grid,
+                           scoring='recall',
+                           cv=stratified_kfold,
+                           n_jobs=-1)
+
+grid_search.fit(X_train, y_train)
+cv_score = grid_search.best_score_
+test_score = grid_search.score(X_test, y_test)
+print(f'Cross-validation score: {cv_score}\nTest score: {test_score}')
+
+"""
 
 
 
-smote = SMOTE()
+
+#Model Tunning
+
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.ensemble import VotingClassifier
+from sklearn.linear_model import LogisticRegression
+from sklearn.svm import SVC
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.ensemble import BaggingClassifier
+from sklearn.ensemble import GradientBoostingClassifier
+from sklearn.ensemble import AdaBoostClassifier
+from sklearn.naive_bayes import GaussianNB
+from lightgbm import LGBMClassifier
+log_clf = LogisticRegression()
+rnd_clf = RandomForestClassifier()
+svm_clf = SVC(gamma="auto")
+tree_clf = DecisionTreeClassifier()
+knn_clf= KNeighborsClassifier()
+bgc_clf=BaggingClassifier()
+gbc_clf=GradientBoostingClassifier()
+abc_clf= AdaBoostClassifier()
+lgbm_clf = LGBMClassifier(random_state = 12345)
+nb_clf = GaussianNB()
+xgb_clf = GradientBoostingClassifier(random_state=12345)
+
+from imblearn.under_sampling import RandomUnderSampler
+from imblearn.under_sampling import NearMiss
+from imblearn.under_sampling import TomekLinks
+from imblearn.under_sampling import ClusterCentroids
+from imblearn.under_sampling import EditedNearestNeighbours
+from imblearn.under_sampling import NeighbourhoodCleaningRule
+from imblearn.over_sampling import RandomOverSampler
+from imblearn.over_sampling import SMOTE
+from imblearn.over_sampling import ADASYN
+from imblearn.combine import SMOTETomek
+from imblearn.combine import SMOTEENN
+rus = RandomUnderSampler()
+nm = NearMiss()
+tl = TomekLinks()
+cc = ClusterCentroids()
+enn = EditedNearestNeighbours()
+ncr = NeighbourhoodCleaningRule()
+ros = RandomOverSampler()
+smt = SMOTE(random_state=11)
+ada = ADASYN()
+smtmk = SMOTETomek()
+smtenn = SMOTEENN()
+
+stratified_kfold = StratifiedKFold(n_splits=3,
+                                   shuffle=True,
+                                   random_state=11)
+
+param_grid = {'classifier__C': [0.001, 0.01, 0.1, 1, 10, 100, 1000]}
+
+voting_clf = VotingClassifier(
+estimators=[('lr', log_clf), ('rf', rnd_clf), ('svc', svm_clf), ('tree', tree_clf),('knn', knn_clf),('bg', bgc_clf),
+            ('gbc', gbc_clf),('abc', abc_clf),("lgbm", lgbm_clf),("nb", nb_clf),("xgb", xgb_clf)],voting='hard')
+#voting_clf.fit(X_train, y_train)
+
+
+for clf in  (log_clf, rnd_clf, svm_clf,tree_clf,knn_clf,bgc_clf,gbc_clf,abc_clf,lgbm_clf,nb_clf,xgb_clf,voting_clf):
+    for smpmthd in (rus, nm, tl, cc, enn, ncr, ros, smt, ada, smtmk, smtenn):
+
+        pipeline = imbpipeline(steps=[['UnderOverSamplingMethods', smpmthd],
+                                      ['classifier', clf]])
+
+        for a in ["accuracy", "precision", "recall", "f1", "roc_auc"]:
+            #cross_val_score(estimator=pipeline, X_train, y_train, scoring=a, cv=stratified_kfold, n_jobs=-1).mean()
+            cv_results = cross_val_score(pipeline, X_train, y_train, cv=stratified_kfold, scoring=a)
+
+
+            """grid_search = GridSearchCV(estimator=pipeline,
+                                       scoring=a,
+                                       param_grid=param_grid,
+                                       cv=stratified_kfold,
+                                       n_jobs=-1)"""
+
+            """cv_score = grid_search.best_score_
+            test_score = grid_search.score(X_test, y_test)"""
+            #test_score = 1
+            print(clf,smpmthd,a,f'Cross-validation score: {cv_results.mean()}')
+
+
+
+
+        """clf.fit(X_train,y_train)
+        y_pred = clf.predict(X_test)
+        print(clf.__class__.__name__,"Accuracy Score :", accuracy_score(y_test, y_pred))
+        print(clf.__class__.__name__,"Precision Score :", precision_score(y_test, y_pred))
+        print(clf.__class__.__name__,"Recall Score :", recall_score(y_test, y_pred))
+        print(clf.__class__.__name__,"F1 Score :", f1_score(y_test, y_pred))"""
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+"""
+
+from numpy import mean
+from sklearn.datasets import make_classification
+from sklearn.model_selection import cross_val_score
+from sklearn.model_selection import RepeatedStratifiedKFold
+from sklearn.tree import DecisionTreeClassifier
+from imblearn.pipeline import Pipeline
+from imblearn.over_sampling import SMOTE
+from imblearn.over_sampling import BorderlineSMOTE
+from imblearn.under_sampling import RandomUnderSampler ENN
+from imblearn.over_sampling import ADASYN
+
+steps = [('over', BorderlineSMOTE()), ('model', DecisionTreeClassifier())]
+pipeline = Pipeline(steps=steps)
+oversample = ADASYN()
+under = RandomUnderSampler()
+X_train, y_train = oversample.fit_resample(X_train, y_train)
+# evaluate pipeline
+cv = RepeatedStratifiedKFold(n_splits=10, n_repeats=3, random_state=1)
+scores = cross_val_score(pipeline, X_test, y_test, scoring='roc_auc', cv=cv, n_jobs=-1)
+print('Mean ROC AUC: %.3f' % mean(scores))
+"""
+
+
+"""
+smote = BorderlineSMOTE()
 X_train, y_train = smote.fit_resample(X_train,y_train)
 
 X_train.head()
@@ -289,7 +560,60 @@ y[0:10]
 
 log_model.predict_proba(X_test)[0:10]
 y_pred = log_model.predict(X_test)
+
+confusion_matrix(y_test,y_pred)
 accuracy_score(y_test, y_pred)
+precision_score(y_test,y_pred)
+recall_score(y_test,y_pred)
+f1_score(y_test,y_pred)
+
+
+from sklearn.svm import SVC
+from sklearn.naive_bayes import GaussianNB
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.model_selection import cross_val_score
+import time
+"""
+
+
+""""
+models = [GaussianNB(), DecisionTreeClassifier(), SVC()]
+names = ["Naive Bayes", "Decision Tree", "SVM"]
+for model, name in zip(models, names):
+    print(name)
+    start = time.time()
+    for score in ["accuracy", "precision", "recall","f1"]:
+        print(score," : ",cross_val_score(, X, y, scoring=score, cv=10).mean())
+    print("Duration : ",time.time() - start,"sec")
+"""
+
+"""
+folds = KFold(n_splits = 5, shuffle = True, random_state = 35)
+scores = []
+
+for n_fold, (train_index, valid_index) in enumerate(folds.split(X,y)):
+    print('\n Fold '+ str(n_fold+1 ) + 
+          ' \n\n train ids :' +  str(train_index) +
+          ' \n\n validation ids :' +  str(valid_index))
+    
+    X_train, X_valid = X[train_index], X[valid_index]
+    y_train, y_valid = y[train_index], y[valid_index]
+    
+    
+    rf_model.fit(X_train, y_train)
+    y_pred = rf_model.predict(X_test)
+    
+    acc_score = accuracy_score(y_test, y_pred)
+    scores.append(acc_score)
+    print('\n Accuracy score for Fold ' +str(n_fold+1) + ' --> ' + str(acc_score)+'\n')
+
+    
+print(scores)
+print('Avg. accuracy score :' + str(np.mean(scores)))
+
+"""
+
+"""
 
 cross_val_score(log_model, X_test, y_test, cv=10).mean()
 
@@ -310,13 +634,37 @@ plt.title('Receiver operating characteristic')
 plt.legend(loc="lower right")
 plt.savefig('Log_ROC')
 plt.show()
+"""
+
+#LR
+
+LR = LogisticRegression()
+LRparam_grid = {
+    'C': [0.001, 0.01, 0.1, 1, 10, 100, 1000],
+    'penalty': ['l1', 'l2'],
+    'max_iter': list(range(100,800,100)),
+    'solver': ['newton-cg', 'lbfgs', 'liblinear', 'sag', 'saga']
+}
+LR_search = GridSearchCV(LR, param_grid=LRparam_grid, refit = True, verbose = 3, cv=5)
+
+# fitting the model for grid search
+LR_search.fit(X_train , y_train)
+LR_search.best_params_
+# summarize
+print('Mean Accuracy: %.3f' % LR_search.best_score_)
+print('Config: %s' % LR_search.best_params_)
+LR_tuned = LogisticRegression(**LR_search.best_params_).fit(X_train,y_train)
+y_pred = LR_tuned.predict(X_test)
+print("LR Accuracy Score : ",accuracy_score(y_test,y_pred))
+print("LR Recall Score : ",recall_score(y_test,y_pred))
 
 
 # RF
+kfold = StratifiedKFold(n_splits=10)
 
-rf_model = RandomForestClassifier(random_state=12345).fit(X, y)
+rf_model = RandomForestClassifier(random_state=12345).fit(X_train, y_train)
 
-cross_val_score(rf_model, X, y, cv=10).mean()
+cross_val_score(rf_model, X_train, y_train, cv=10).mean()
 
 rf_params = {"n_estimators": [200, 500, 1000],
              "max_features": [5, 7, 9],
@@ -325,39 +673,42 @@ rf_params = {"n_estimators": [200, 500, 1000],
 
 rf_model = RandomForestClassifier(random_state=12345)
 
-gs_cv = GridSearchCV(rf_model,
+rf_gs_cv = GridSearchCV(rf_model,
                      rf_params,
-                     cv=10,
+                     cv=kfold,
                      n_jobs=-1,
-                     verbose=2).fit(X, y)
+                     verbose=2).fit(X_train, y_train)
 
-gs_cv.best_params_
+rf_gs_cv.best_params_
 
-rf_tuned = RandomForestClassifier(**gs_cv.best_params_)
-cross_val_score(rf_tuned, X, y, cv=10).mean()
-
-
-
+rf_tuned = RandomForestClassifier(**rf_gs_cv.best_params_).fit(X_train,y_train)
+y_pred = rf_tuned.predict(X_test)
+print("RF Accuracy Score : ",accuracy_score(y_test,y_pred))
+print("RF Recall Score : ",recall_score(y_test,y_pred))
 
 # LightGBM
 
-
+kfold = StratifiedKFold(n_splits=10)
 lgbm = LGBMClassifier(random_state=12345)
-cross_val_score(lgbm, X, y, cv=10).mean()
+cross_val_score(lgbm, X_train, y_train, cv=kfold,scoring="recall").mean()
 
 # model tuning
 lgbm_params = {"learning_rate": [0.01, 0.1, 0.5],
                "n_estimators": [500, 1000, 1500],
-               "max_depth": [3, 5, 8]}
+               "max_depth": [3, 5, 8],
+               "num_leaves":[30]}
+
 
 gs_cv = GridSearchCV(lgbm,
                      lgbm_params,
-                     cv=5,
-                     n_jobs=-1,
-                     verbose=2).fit(X, y)
+                     cv=kfold,
+                     n_jobs=1,
+                     verbose=2).fit(X_train, y_train)
 
-lgbm_tuned = LGBMClassifier(**gs_cv.best_params_).fit(X, y)
-cross_val_score(lgbm_tuned, X, y, cv=10).mean()
+lgbm_tuned = LGBMClassifier(**gs_cv.best_params_).fit(X_train, y_train)
+y_pred = lgbm_tuned.predict(X_test)
+print("LGBM Accuracy Score : ",accuracy_score(y_test,y_pred))
+print("LGBM Recall Score : ",recall_score(y_test,y_pred))
 
 feature_imp = pd.Series(lgbm_tuned.feature_importances_,
                         index=X.columns).sort_values(ascending=False)
@@ -368,7 +719,28 @@ plt.ylabel('Değişkenler')
 plt.title("Değişken Önem Düzeyleri")
 plt.show()
 
-# eda
+#####
+xgb = GradientBoostingClassifier(random_state=12345)
+
+xgb_params = {"n_estimators": [100, 500, 1000],
+              "subsample" : [0.6, 0.8, 1.0],
+              "max_depth" : [3, 4, 5],
+              "learning_rate" : [0.1, 0.01, 0.05,],
+              "min_samples_split" : [2, 5, 10]}
+
+xgb_cv_model = GridSearchCV(xgb,
+                     xgb_params,
+                     cv = 5,
+                     n_jobs = -1,
+                     verbose = 2).fit(X_train,y_train)
+
+xgb_tuned = GradientBoostingClassifier(**xgb_cv_model.best_params_,random_state=12345).fit(X_train,y_train)
+y_pred = xgb_tuned.predict(X_test)
+print("XGB Accuracy Score : ",accuracy_score(y_test,y_pred))
+print("XGB Recall Score : ",recall_score(y_test,y_pred))
+
+
+"""# eda
 # data prep
 # feature eng.
 # model
@@ -377,7 +749,7 @@ plt.show()
 # final model
 # feature importance
 
-# TUM MODELLER CV YONTEMI (ÖDEV BUNA GORE OLACAK)
+# TUM MODELLER CV YONTEMI
 
 models = [('LR', LogisticRegression()),
           ('KNN', KNeighborsClassifier()),
@@ -386,19 +758,19 @@ models = [('LR', LogisticRegression()),
           ('SVM', SVC(gamma='auto')),
           ('XGB', GradientBoostingClassifier()),
           ("LightGBM", LGBMClassifier()),
-          ("XBoost", XGBClassifier())]
+          ("Naive Bayes",GaussianNB()),]
 
 # evaluate each model in turn
 results = []
 names = []
 
-'''for name, model in models:
-    kfold = KFold(n_splits=10, random_state=123456)
-    cv_results = cross_val_score(model, X, y, cv=10, scoring="accuracy")
+for name, model in models:
+    kfold = KFold(n_splits=10, random_state=123456, shuffle=True)
+    cv_results = cross_val_score(model, X_test, y_test, cv=10, scoring=["accuracy","precision","recall","f1"])
     results.append(cv_results)
     names.append(name)
     msg = "%s: %f (%f)" % (name, cv_results.mean(), cv_results.std())
-    print(msg)'''
+    print(msg)
 
 # boxplot algorithm comparison
 fig = plt.figure(figsize=(15, 10))
@@ -424,10 +796,12 @@ x_train, y_train = smk.fit_resample(x_train, y_train)
 x_test, y_test = smk.fit_resample(x_test, y_test)
 
 
-"""x_train.columns
+""""""
+x_train.columns
 lgbm = LGBMClassifier(random_state=12345)
 lgbm.fit(x_train,y_train)
 accuracy_score(y_test,lgbm.predict(x_test))"""
+"""
 
 
 
@@ -441,25 +815,39 @@ from sklearn.neighbors import KNeighborsClassifier
 from sklearn.ensemble import BaggingClassifier
 from sklearn.ensemble import GradientBoostingClassifier
 from sklearn.ensemble import AdaBoostClassifier
+from sklearn.naive_bayes import GaussianNB
+from lightgbm import LGBMClassifier
 log_clf = LogisticRegression()
 rnd_clf = RandomForestClassifier()
-svm_clf = SVC()
+svm_clf = SVC(gamma="auto")
 tree_clf = DecisionTreeClassifier()
 knn_clf= KNeighborsClassifier()
 bgc_clf=BaggingClassifier()
 gbc_clf=GradientBoostingClassifier()
 abc_clf= AdaBoostClassifier()
+lgbm_clf = LGBMClassifier(random_state = 12345)
+nb_clf = GaussianNB()
+
+
 
 voting_clf = VotingClassifier(
 estimators=[('lr', log_clf), ('rf', rnd_clf), ('svc', svm_clf), ('tree', tree_clf),('knn', knn_clf),('bg', bgc_clf),
-            ('gbc', gbc_clf),('abc', abc_clf)],voting='hard')
-voting_clf.fit(x_train, y_train)
+            ('gbc', gbc_clf),('abc', abc_clf),("lgbm", lgbm_clf),("nb", nb_clf)],voting='hard')
+voting_clf.fit(X_train, y_train)
 
-from sklearn.metrics import accuracy_score
-for clf in  (log_clf, rnd_clf, svm_clf,tree_clf,knn_clf,bgc_clf,gbc_clf,abc_clf,voting_clf):
-    clf.fit(x_train,y_train)
-    y_pred = clf.predict(x_test)
-    print(clf.__class__.__name__, accuracy_score(y_test, y_pred))
+
+for clf in  (log_clf, rnd_clf, svm_clf,tree_clf,knn_clf,bgc_clf,gbc_clf,abc_clf,lgbm_clf,nb_clf,voting_clf):
+
+    clf.fit(X_train,y_train)
+    y_pred = clf.predict(X_test)
+    print(clf.__class__.__name__,"Accuracy Score :", accuracy_score(y_test, y_pred))
+    print(clf.__class__.__name__,"Precision Score :", precision_score(y_test, y_pred))
+    print(clf.__class__.__name__,"Recall Score :", recall_score(y_test, y_pred))
+    print(clf.__class__.__name__,"F1 Score :", f1_score(y_test, y_pred))
+
+
+
+
 
 #####
 lgbm = LGBMClassifier(random_state = 12345)
@@ -472,10 +860,10 @@ gs_cv = GridSearchCV(lgbm,
                      lgbm_params,
                      cv = 10,
                      n_jobs = -1,
-                     verbose = 2).fit(x_train,y_train)
+                     verbose = 2).fit(X_train,y_train)
 
-lgbm_tuned = LGBMClassifier(**gs_cv.best_params_).fit(x_train,y_train)
-y_pred = lgbm_tuned.predict(x_test)
+lgbm_tuned = LGBMClassifier(**gs_cv.best_params_).fit(X_train,y_train)
+y_pred = lgbm_tuned.predict(X_test)
 acc_score = accuracy_score(y_test, y_pred)
 print(acc_score)
 #####
@@ -491,21 +879,23 @@ xgb_cv_model = GridSearchCV(xgb,
                      xgb_params,
                      cv = 5,
                      n_jobs = -1,
-                     verbose = 2).fit(x_train,y_train)
+                     verbose = 2).fit(X_train,y_train)
 
 xgb_tuned = GradientBoostingClassifier(**xgb_cv_model.best_params_,random_state=12345)
-xgb_tuned = xgb_tuned.fit(x_train,y_train)
-y_pred = xgb_tuned.predict(x_test)
+xgb_tuned = xgb_tuned.fit(X_train,y_train)
+y_pred = xgb_tuned.predict(X_test)
 acc_score = accuracy_score(y_test, y_pred)
+recall_score(y_test,y_pred)
 print(acc_score)
 
 #SVM
 
 from sklearn import svm
 classifier = svm.SVC(class_weight={0:0.60, 1:0.40},random_state=12345)
-svm_tuned = classifier.fit(x_train, y_train)
-y_pred = svm_tuned.predict(x_test)
+svm_tuned = classifier.fit(X_train, y_train)
+y_pred = svm_tuned.predict(X_test)
 acc_score = accuracy_score(y_test, y_pred)
+recall_score(y_test,y_pred)
 print(acc_score)
 
 #SVM
@@ -543,6 +933,6 @@ print("Training set score for SVM: %f" % final_model.score(x_train , y_train))
 print("Testing  set score for SVM: %f" % final_model.score(x_test  , y_test ))
 
 svm_model.score
-
+"""
 
 
